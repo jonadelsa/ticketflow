@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TicketFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2126;--surface3:#252830;
+  --border:#2a2d35;--accent:#4f7cff;--accent2:#a78bfa;--success:#34d399;
+  --warn:#fbbf24;--danger:#f87171;--text:#f0f1f5;--muted:#8892a4;
+  --font:'Syne',sans-serif;--mono:'DM Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh;overflow-x:hidden}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{font-size:18px;font-weight:700;padding:0 8px 20px;letter-spacing:-0.5px;color:var(--text)}
+.logo span{color:var(--accent)}
+.nav-item{padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;transition:all .15s;user-select:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:#1a2340;color:var(--accent)}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6;flex-shrink:0}
+.badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:20px}
+.divider{height:1px;background:var(--border);margin:8px 0}
+.sec-label-nav{font-size:10px;color:var(--muted);padding:4px 10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
+/* MAIN */
+.main{padding:28px;overflow:auto;min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-0.5px}
+.page-title span{color:var(--muted);font-weight:400;font-size:14px;margin-left:8px}
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#3d6aee}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--border)}
+.btn-danger:hover{background:#2a1010;border-color:var(--danger)}
+.btn-success{background:var(--success);color:#000}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-xs{padding:3px 9px;font-size:11px}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.stat-label{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.stat-val{font-size:26px;font-weight:700}
+/* TICKETS */
+.tickets-grid{display:flex;flex-direction:column;gap:8px}
+.ticket-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:grid;grid-template-columns:28px 1fr 130px 110px 70px 90px;align-items:center;gap:12px;cursor:pointer;transition:all .15s}
+.ticket-row:hover{border-color:var(--accent);background:var(--surface2)}
+.ticket-title{font-weight:600;font-size:14px}
+.ticket-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.stage-pill{font-size:11px;font-weight:600;font-family:var(--mono);padding:4px 10px;border-radius:6px;text-align:center;white-space:nowrap}
+.priority-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.p-high{background:var(--danger)}.p-med{background:var(--warn)}.p-low{background:var(--success)}
+.date{font-size:11px;color:var(--muted);font-family:var(--mono)}
+/* PANEL */
+.panel{display:none;position:fixed;top:0;right:0;width:580px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:100;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.4)}
+.panel.open{display:flex}
+.panel-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--surface);z-index:10}
+.close-btn{width:30px;height:30px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.panel-body{padding:20px 24px;flex:1;display:flex;flex-direction:column;gap:20px;overflow-y:auto}
+.section-label{font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+/* STAGES TRACK */
+.stages-track{display:flex;gap:0}
+.stage-step{flex:1;padding:7px 4px;text-align:center;font-size:10px;font-weight:600;font-family:var(--mono);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s}
+.stage-step:first-child{border-radius:6px 0 0 6px}
+.stage-step:last-child{border-radius:0 6px 6px 0}
+.stage-step.active{color:#fff;z-index:1}
+.stage-step.done-step{border-color:var(--success);color:var(--success);background:#0f2a1a}
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:6px}
+.check-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s}
+.check-item.checked{border-color:var(--success);background:#0a1f14}
+.check-box{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;transition:all .15s}
+.check-item.checked .check-box{background:var(--success);border-color:var(--success);color:#000;font-weight:700}
+.check-label{font-size:13px;flex:1}
+.check-item.checked .check-label{color:var(--muted);text-decoration:line-through}
+.req-badge{font-size:10px;font-family:var(--mono);color:var(--danger);background:#2a1010;padding:2px 7px;border-radius:4px;flex-shrink:0}
+/* COMMENTS */
+.comments{display:flex;flex-direction:column;gap:10px}
+.comment{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.comment-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.role-badge{font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;font-weight:600}
+.role-admin{background:#1a2340;color:var(--accent)}
+.role-team{background:#2a1f40;color:var(--accent2)}
+.role-user{background:#0f2030;color:#38bdf8}
+.comment-author{font-size:12px;font-weight:600}
+.comment-time{font-size:10px;color:var(--muted);font-family:var(--mono);margin-left:auto}
+.comment-text{font-size:13px;color:#c8d0e0;line-height:1.5}
+textarea{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:var(--font);font-size:13px;resize:none;width:100%;outline:none;line-height:1.5;transition:border .15s}
+textarea:focus{border-color:var(--accent)}
+select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;cursor:pointer}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.info-item{background:var(--surface2);border-radius:8px;padding:10px 12px}
+.info-key{font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:3px}
+.info-val{font-size:13px;font-weight:500}
+/* FORMS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.card-sub{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:block}
+input[type=text],input[type=email]{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;width:100%;outline:none;transition:border .15s}
+input:focus{border-color:var(--accent)}
+/* CONFIG */
+.tabs{display:flex;gap:2px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:24px;width:fit-content;flex-wrap:wrap}
+.tab{padding:7px 16px;font-size:13px;font-weight:600;border-radius:7px;cursor:pointer;color:var(--muted);transition:all .15s}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.stage-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.drag-handle{cursor:grab;color:var(--muted);font-size:16px;user-select:none;padding:2px 4px}
+.stage-color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;cursor:pointer;border:2px solid transparent;transition:border .15s}
+.stage-color-dot:hover{border-color:var(--text)}
+.stage-name-input{background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;flex:1;outline:none;min-width:70px}
+.stage-name-input:focus{color:var(--accent)}
+.stage-desc-input{background:transparent;border:none;color:var(--muted);font-family:var(--font);font-size:12px;flex:2;outline:none}
+.stage-desc-input:focus{color:var(--text)}
+.stage-badge{font-size:10px;font-family:var(--mono);padding:3px 9px;border-radius:5px;white-space:nowrap}
+.color-picker-row{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0}
+.color-swatch{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.color-swatch:hover,.color-swatch.sel{border-color:var(--text);transform:scale(1.15)}
+.doc-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.doc-name-input{background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:13px;flex:1;outline:none}
+.doc-name-input:focus{color:var(--accent)}
+.toggle{width:36px;height:20px;border-radius:10px;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}.toggle.off{background:var(--border)}
+.toggle::after{content:'';position:absolute;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .2s}
+.toggle.on::after{left:19px}.toggle.off::after{left:3px}
+.toggle-label{font-size:11px;color:var(--muted);font-family:var(--mono);width:62px}
+.member-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.role-select-cfg{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;cursor:pointer}
+.add-form{background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:14px;margin-top:4px;display:none}
+.add-form.open{display:block}
+.input-row{display:flex;gap:8px;margin-bottom:8px}
+.input-row input{margin:0}
+.pipeline-preview{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-top:12px}
+.pipe-step{flex:1;padding:8px 4px;text-align:center;font-size:10px;font-weight:600;font-family:var(--mono);color:#fff}
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:480px;max-width:90vw}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--success);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--success);font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+/* INFO BOX */
+.info-box{background:#0f1a2e;border:1px solid #1a3060;border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.info-box-title{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px}
+.info-box p{font-size:12px;color:#8aa4cc;line-height:1.7}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono)}
+.step-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+.step-content{font-size:13px;color:var(--muted);line-height:1.6}
+.step-content strong{color:var(--text)}
+code{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:11px;color:var(--accent2)}
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">Ticket<span>Flow</span></div>
+  <div class="nav-item active" id="nav-all" onclick="navGo('all')"><div class="nav-dot"></div>Todos los tickets<span class="badge" id="badge-total">0</span></div>
+  <div class="nav-item" id="nav-new" onclick="navGo('new')"><div class="nav-dot"></div>Nueva solicitud</div>
+  <div class="divider"></div>
+  <div class="sec-label-nav">Por etapa</div>
+  <div id="sidebar-stages"></div>
+  <div class="divider"></div>
+  <div class="sec-label-nav">Administración</div>
+  <div class="nav-item" id="nav-cfg" onclick="navGo('cfg')"><div class="nav-dot"></div>Configuración</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- VIEW: TICKETS -->
+  <div id="view-all">
+    <div class="topbar">
+      <div class="page-title" id="list-title">Solicitudes <span>todas</span></div>
+      <button class="btn btn-primary" onclick="navGo('new')">+ Nueva solicitud</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-val" style="color:var(--accent)" id="s-total">0</div></div>
+      <div class="stat"><div class="stat-label">Pendientes</div><div class="stat-val" style="color:var(--warn)" id="s-pend">0</div></div>
+      <div class="stat"><div class="stat-label">En proceso</div><div class="stat-val" style="color:var(--accent2)" id="s-prog">0</div></div>
+      <div class="stat"><div class="stat-label">Completados</div><div class="stat-val" style="color:var(--success)" id="s-done">0</div></div>
+    </div>
+    <div class="tickets-grid" id="tickets-list"></div>
+  </div>
+
+  <!-- VIEW: NEW TICKET -->
+  <div id="view-new" style="display:none;max-width:580px">
+    <div class="topbar">
+      <div class="page-title">Nueva solicitud</div>
+      <button class="btn btn-ghost" onclick="navGo('all')">← Volver</button>
+    </div>
+    <div class="card">
+      <div class="form-group">
+        <label class="form-label">Título de la solicitud *</label>
+        <input type="text" id="n-title" placeholder="Ej: Revisión de contrato Q2">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <textarea id="n-desc" rows="3" placeholder="Detalla el apoyo que necesitas..."></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Solicitante *</label>
+          <input type="text" id="n-req" placeholder="Nombre completo">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridad</label>
+          <select id="n-prio" style="width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;outline:none">
+            <option value="high">Alta</option>
+            <option value="med" selected>Media</option>
+            <option value="low">Baja</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Asignar a</label>
+        <select id="n-assign" style="width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;outline:none" id="n-assign"></select>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div class="section-label">Documentos requeridos para esta solicitud</div>
+        <div id="n-checklist" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <button class="btn btn-primary" onclick="createTicket()" style="padding:10px 24px">Crear solicitud</button>
+    </div>
+  </div>
+
+  <!-- VIEW: CONFIG -->
+  <div id="view-cfg" style="display:none">
+    <div class="topbar">
+      <div class="page-title">Configuración</div>
+      <button class="btn btn-primary" id="cfg-save-btn" onclick="saveConfig()">Guardar cambios</button>
+    </div>
+    <div class="tabs">
+      <div class="tab active" id="ctab-stages" onclick="showCTab('stages')">Etapas</div>
+      <div class="tab" id="ctab-docs" onclick="showCTab('docs')">Documentos</div>
+      <div class="tab" id="ctab-team" onclick="showCTab('team')">Equipo</div>
+      <div class="tab" id="ctab-integration" onclick="showCTab('integration')">Integración Teams</div>
+    </div>
+
+    <div id="cv-stages">
+      <div class="card">
+        <div class="card-title">🔄 Etapas del flujo</div>
+        <div class="card-sub">Edita nombre, descripción y color. La primera etapa es siempre el estado inicial de un ticket nuevo.</div>
+        <div id="cfg-stages-list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addStage()">+ Agregar etapa</button>
+        <div style="margin-top:20px">
+          <div class="section-label">Vista previa del pipeline</div>
+          <div class="pipeline-preview" id="pipeline-preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="cv-docs" style="display:none">
+      <div class="card">
+        <div class="card-title">📎 Documentos requeridos</div>
+        <div class="card-sub">Define los documentos del checklist. Activa "Obligatorio" para que el ticket no pueda completarse sin ese documento.</div>
+        <div id="cfg-docs-list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="togAddDoc()">+ Agregar documento</button>
+        <div class="add-form" id="add-doc-form">
+          <div class="input-row">
+            <input type="text" id="new-doc-name" placeholder="Nombre del documento">
+            <button class="btn btn-primary btn-sm" onclick="addDoc()">Agregar</button>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer">
+            <input type="checkbox" id="new-doc-req"> Marcar como obligatorio
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="cv-team" style="display:none">
+      <div class="card">
+        <div class="card-title">👥 Equipo</div>
+        <div class="card-sub"><strong>Admin:</strong> acceso total. <strong>Equipo:</strong> puede comentar y actualizar documentos. <strong>Solo lectura:</strong> solo visualiza.</div>
+        <div id="cfg-team-list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="togAddMember()">+ Agregar miembro</button>
+        <div class="add-form" id="add-member-form">
+          <div class="input-row">
+            <input type="text" id="nm-name" placeholder="Nombre completo">
+            <input type="email" id="nm-email" placeholder="correo@empresa.com">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <label style="font-size:12px;color:var(--muted)">Rol:</label>
+            <select id="nm-role" class="role-select-cfg" style="font-size:12px;padding:5px 10px">
+              <option value="admin">Administrador</option>
+              <option value="team" selected>Equipo</option>
+              <option value="viewer">Solo lectura</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addMember()">Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="cv-integration" style="display:none">
+      <div class="card">
+        <div class="card-title">🔗 Publicar en Microsoft Teams vía SharePoint</div>
+        <div class="card-sub">Sigue estos 6 pasos para dejar TicketFlow disponible como pestaña en tu canal de Teams.</div>
+        <div class="step-row"><div class="step-num">1</div><div class="step-content"><strong>Descarga el archivo TicketFlow.html</strong> — es este mismo archivo, con todo incluido (sin dependencias externas).</div></div>
+        <div class="step-row"><div class="step-num">2</div><div class="step-content">Ve a tu <strong>sitio de SharePoint</strong> → <em>Documentos</em> → crea una carpeta llamada <code>Apps</code> → subcarpeta <code>ticketflow</code>.</div></div>
+        <div class="step-row"><div class="step-num">3</div><div class="step-content"><strong>Sube el archivo</strong> <code>TicketFlow.html</code> dentro de esa carpeta. Haz clic derecho → <em>Copiar vínculo</em> → asegúrate de que sea accesible para tu organización.</div></div>
+        <div class="step-row"><div class="step-num">4</div><div class="step-content">Crea o edita una <strong>página de SharePoint</strong> → agrega un <em>Web Part</em> de tipo <strong>Embed</strong> → pega la URL del archivo HTML.</div></div>
+        <div class="step-row"><div class="step-num">5</div><div class="step-content"><strong>Publica la página</strong> de SharePoint y copia su URL completa (algo como <code>https://tuempresa.sharepoint.com/sites/tuSitio/SitePages/TicketFlow.aspx</code>).</div></div>
+        <div class="step-row"><div class="step-num">6</div><div class="step-content">En Teams abre tu canal → <strong>+ Agregar pestaña</strong> → elige <em>Sitio web</em> → pega la URL de la página de SharePoint → ponle el nombre <em>Solicitudes</em> → Guardar.</div></div>
+        <div class="info-box" style="margin-top:8px">
+          <div class="info-box-title">⚠️ Nota sobre iframe en SharePoint</div>
+          <p>Si el Web Part Embed no renderiza el HTML directamente, usa en su lugar el Web Part <strong>File viewer</strong> apuntando al archivo .html, o considera alojar el archivo en <strong>Azure Static Web Apps</strong> (gratis) para tener una URL HTTPS limpia que Teams acepte sin restricciones.</p>
+        </div>
+        <div class="info-box" style="background:#1a1206;border-color:#3a2800">
+          <div class="info-box-title" style="color:var(--warn)">📋 Qué pedirle a TI si hay bloqueos</div>
+          <p>1. Permiso para subir archivos HTML a bibliotecas de SharePoint<br>2. Permiso para agregar Web Parts de tipo Embed en páginas<br>3. Confirmar que la URL de SharePoint no está bloqueada para iframes en Teams</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- TICKET DETAIL PANEL -->
+<div class="panel" id="ticket-panel">
+  <div class="panel-header">
+    <div style="flex:1">
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:4px" id="p-id"></div>
+      <div style="font-size:17px;font-weight:700" id="p-title"></div>
+    </div>
+    <div class="close-btn" onclick="closePanel()">✕</div>
+  </div>
+  <div class="panel-body">
+    <div>
+      <div class="section-label">Etapa actual — haz clic para cambiar</div>
+      <div class="stages-track" id="p-stages"></div>
+    </div>
+    <div class="info-grid" id="p-info"></div>
+    <div>
+      <div class="section-label">Descripción</div>
+      <div style="font-size:13px;color:#c8d0e0;line-height:1.6" id="p-desc"></div>
+    </div>
+    <div>
+      <div class="section-label">Checklist de documentos</div>
+      <div class="checklist" id="p-checklist"></div>
+    </div>
+    <div>
+      <div class="section-label">Comentarios</div>
+      <div class="comments" id="p-comments"></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="c-role"><option value="admin">Admin</option><option value="team">Equipo</option><option value="user">Solicitante</option></select>
+          <span style="font-size:12px;color:var(--muted)">comentando como</span>
+        </div>
+        <textarea id="c-input" rows="2" placeholder="Escribe un comentario..."></textarea>
+        <button class="btn btn-primary btn-sm" onclick="addComment()" style="align-self:flex-start">Enviar comentario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-bg" id="success-modal">
+  <div class="modal">
+    <div style="font-size:40px;margin-bottom:12px">✓</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:8px">¡Solicitud creada!</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">El ticket fue registrado. El equipo asignado puede comenzar la revisión.</p>
+    <button class="btn btn-primary" onclick="document.getElementById('success-modal').classList.remove('open');navGo('all')">Ver todas las solicitudes</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+const COLORS=['#4f7cff','#a78bfa','#34d399','#fbbf24','#f87171','#38bdf8','#fb923c','#e879f9','#a3e635'];
+const COLOR_BG={'#4f7cff':'#1a2340','#a78bfa':'#2a1f40','#34d399':'#0f2a1a','#fbbf24':'#2a2210','#f87171':'#2a1010','#38bdf8':'#0f2030','#fb923c':'#2a1808','#e879f9':'#28103a','#a3e635':'#1a2808'};
+const ROLE_META={admin:{bg:'#1a2340',text:'#4f7cff',label:'Admin'},team:{bg:'#2a1f40',text:'#a78bfa',label:'Equipo'},viewer:{bg:'#1a2210',text:'#fbbf24',label:'Solo lectura'}};
+
+let stages=[
+  {id:1,name:'Abierto',desc:'Solicitud recibida',color:'#4f7cff'},
+  {id:2,name:'Revisión',desc:'Documentos en verificación',color:'#a78bfa'},
+  {id:3,name:'En proceso',desc:'Atención activa',color:'#38bdf8'},
+  {id:4,name:'Aprobación',desc:'Esperando visto bueno',color:'#fbbf24'},
+  {id:5,name:'Completado',desc:'Solicitud resuelta',color:'#34d399'},
+];
+let docs=[
+  {id:1,name:'Identificación oficial',required:true},
+  {id:2,name:'Contrato firmado',required:true},
+  {id:3,name:'RFC / Datos fiscales',required:false},
+  {id:4,name:'Carta autorización',required:false},
+];
+let team=[
+  {id:1,name:'Carlos Mendoza',email:'carlos@empresa.com',role:'admin',initials:'CM',color:'#1a2340',textColor:'#4f7cff'},
+  {id:2,name:'Ana Ríos',email:'ana@empresa.com',role:'team',initials:'AR',color:'#2a1f40',textColor:'#a78bfa'},
+  {id:3,name:'Sandra Vega',email:'sandra@empresa.com',role:'team',initials:'SV',color:'#0f2030',textColor:'#38bdf8'},
+];
+let tickets=[
+  {id:'TKT-001',title:'Revisión de contrato Q2',desc:'Revisión de cláusulas antes de firma con el cliente.',requester:'Luis Torres',assignee:'Carlos Mendoza',priority:'high',stageId:4,created:'2026-05-01',
+    docs:[{id:1,done:true,link:'https://sharepoint.com/doc1'},{id:2,done:true,link:'https://sharepoint.com/doc2'},{id:3,done:true,link:''},{id:4,done:false,link:''}],
+    comments:[{role:'user',author:'Luis Torres',time:'May 1, 10:12',text:'Adjunto los documentos. Quedo en espera.'},{role:'admin',author:'Carlos Mendoza',time:'May 2, 09:40',text:'Recibido. Revisamos en 48 hrs.'}]},
+  {id:'TKT-002',title:'Alta de nuevo proveedor',desc:'Registrar proveedor de servicios cloud.',requester:'Sandra Vega',assignee:'Ana Ríos',priority:'med',stageId:2,created:'2026-05-03',
+    docs:[{id:1,done:true,link:''},{id:2,done:false,link:''},{id:3,done:true,link:''},{id:4,done:false,link:''}],
+    comments:[{role:'team',author:'Ana Ríos',time:'May 3, 14:00',text:'Falta el contrato firmado y la carta de autorización.'}]},
+  {id:'TKT-003',title:'Soporte técnico plataforma',desc:'Error en módulo de reportes. Afecta a 3 usuarios.',requester:'Equipo Ops',assignee:'Sandra Vega',priority:'high',stageId:3,created:'2026-05-04',
+    docs:[{id:1,done:true,link:''},{id:2,done:true,link:''}],
+    comments:[{role:'team',author:'Sandra Vega',time:'May 4, 08:30',text:'Bug identificado. Aplicando parche.'},{role:'admin',author:'Carlos Mendoza',time:'May 4, 09:00',text:'Prioridad alta. Resolver hoy.'}]},
+  {id:'TKT-004',title:'Acceso ERP nuevo colaborador',desc:'Acceso al módulo de finanzas para nuevo integrante.',requester:'RRHH',assignee:'Carlos Mendoza',priority:'low',stageId:5,created:'2026-04-28',
+    docs:[{id:1,done:true,link:''},{id:2,done:true,link:''}],
+    comments:[{role:'admin',author:'Carlos Mendoza',time:'Abr 29, 11:00',text:'Acceso otorgado. Ticket cerrado.'}]},
+];
+let currentTicket=null;
+let filterStageId=null;
+
+// ── NAVIGATION ────────────────────────────────────────
+function navGo(view){
+  ['all','new','cfg'].forEach(v=>document.getElementById('view-'+v).style.display='none');
+  ['all','new','cfg'].forEach(v=>document.getElementById('nav-'+v).classList.remove('active'));
+  document.getElementById('view-'+view).style.display='';
+  document.getElementById('nav-'+view).classList.add('active');
+  closePanel();
+  if(view==='all') renderTickets();
+  if(view==='new') renderNewForm();
+  if(view==='cfg'){showCTab('stages');}
+}
+function filterByStage(id){
+  filterStageId=id;
+  const s=stages.find(x=>x.id===id);
+  document.getElementById('list-title').innerHTML=`Solicitudes <span>${s?s.name.toLowerCase():'todas'}</span>`;
+  navGo('all');
+}
+
+// ── SIDEBAR ───────────────────────────────────────────
+function renderSidebar(){
+  document.getElementById('sidebar-stages').innerHTML=stages.map(s=>`
+    <div class="nav-item" onclick="filterByStage(${s.id})">
+      <div class="nav-dot" style="background:${s.color};opacity:1"></div>${s.name}
+    </div>`).join('');
+  populateAssignees();
+}
+
+function populateAssignees(){
+  const sel=document.getElementById('n-assign');
+  if(!sel)return;
+  sel.innerHTML=team.map(m=>`<option>${m.name} (${m.role==='admin'?'Admin':'Equipo'})</option>`).join('');
+}
+
+// ── TICKETS LIST ──────────────────────────────────────
+function renderTickets(){
+  let data=filterStageId?tickets.filter(t=>t.stageId===filterStageId):tickets;
+  const list=document.getElementById('tickets-list');
+  if(!data.length){list.innerHTML='<div class="empty">No hay solicitudes en esta vista.</div>';updateStats();return;}
+  list.innerHTML=data.map(t=>{
+    const st=stages.find(s=>s.id===t.stageId)||stages[0];
+    const docsDone=t.docs.filter(d=>d.done).length;
+    return `<div class="ticket-row" onclick="openTicket('${t.id}')">
+      <div class="priority-dot p-${t.priority}"></div>
+      <div><div class="ticket-title">${t.title}</div><div class="ticket-sub">${t.requester} · ${t.id}</div></div>
+      <div><span class="stage-pill" style="background:${COLOR_BG[st.color]||'#1a2340'};color:${st.color}">${st.name.toUpperCase()}</span></div>
+      <div style="font-size:12px;color:var(--muted)">${t.assignee.split(' ')[0]}</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${docsDone}/${t.docs.length} docs</div>
+      <div class="date">${t.created}</div>
+    </div>`;
+  }).join('');
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('s-total').textContent=tickets.length;
+  document.getElementById('badge-total').textContent=tickets.length;
+  document.getElementById('s-pend').textContent=tickets.filter(t=>stages.findIndex(s=>s.id===t.stageId)<=1).length;
+  document.getElementById('s-prog').textContent=tickets.filter(t=>{const i=stages.findIndex(s=>s.id===t.stageId);return i>1&&i<stages.length-1;}).length;
+  document.getElementById('s-done').textContent=tickets.filter(t=>t.stageId===stages[stages.length-1].id).length;
+}
+
+// ── TICKET PANEL ──────────────────────────────────────
+function openTicket(id){
+  currentTicket=tickets.find(t=>t.id===id);
+  const t=currentTicket;
+  document.getElementById('p-id').textContent=t.id;
+  document.getElementById('p-title').textContent=t.title;
+  document.getElementById('p-desc').textContent=t.desc;
+  const prio={high:'Alta · ',med:'Media · ',low:'Baja · '};
+  document.getElementById('p-info').innerHTML=`
+    <div class="info-item"><div class="info-key">Solicitante</div><div class="info-val">${t.requester}</div></div>
+    <div class="info-item"><div class="info-key">Asignado a</div><div class="info-val">${t.assignee}</div></div>
+    <div class="info-item"><div class="info-key">Prioridad</div><div class="info-val" style="color:${t.priority==='high'?'var(--danger)':t.priority==='med'?'var(--warn)':'var(--success)'}">${t.priority==='high'?'Alta':t.priority==='med'?'Media':'Baja'}</div></div>
+    <div class="info-item"><div class="info-key">Creado</div><div class="info-val">${t.created}</div></div>`;
+  renderPanelStages();
+  renderPanelChecklist();
+  renderPanelComments();
+  document.getElementById('ticket-panel').classList.add('open');
+}
+
+function renderPanelStages(){
+  const t=currentTicket;
+  const ci=stages.findIndex(s=>s.id===t.stageId);
+  document.getElementById('p-stages').innerHTML=stages.map((s,i)=>`
+    <div class="stage-step ${i===ci?'active':i<ci?'done-step':''}"
+      style="${i===ci?'background:'+s.color+';border-color:'+s.color:''}"
+      onclick="changeStage(${s.id})">${s.name.substring(0,7).toUpperCase()}</div>`).join('');
+}
+
+function changeStage(id){
+  currentTicket.stageId=id;
+  renderPanelStages();
+  renderTickets();
+  showToast('Etapa actualizada a: '+stages.find(s=>s.id===id).name);
+}
+
+function renderPanelChecklist(){
+  document.getElementById('p-checklist').innerHTML=currentTicket.docs.map((d,i)=>{
+    const doc=docs.find(x=>x.id===d.id)||{name:'Documento '+i,required:false};
+    return `<div class="check-item ${d.done?'checked':''}" onclick="togPanelDoc(${i})">
+      <div class="check-box">${d.done?'✓':''}</div>
+      <span class="check-label">${doc.name}</span>
+      ${doc.required?'<span class="req-badge">Requerido</span>':''}
+      ${d.link?`<a href="${d.link}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:var(--accent);font-family:var(--mono);text-decoration:none">Ver ↗</a>`:''}
+    </div>`;
+  }).join('');
+}
+
+function togPanelDoc(i){
+  currentTicket.docs[i].done=!currentTicket.docs[i].done;
+  renderPanelChecklist();
+  renderTickets();
+}
+
+function renderPanelComments(){
+  const rc={admin:'role-admin',team:'role-team',user:'role-user'};
+  const rl={admin:'Admin',team:'Equipo',user:'Solicitante'};
+  document.getElementById('p-comments').innerHTML=currentTicket.comments.map(c=>`
+    <div class="comment">
+      <div class="comment-head">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${c.author.split(' ').map(x=>x[0]).join('').slice(0,2)}</div>
+        <span class="comment-author">${c.author}</span>
+        <span class="role-badge ${rc[c.role]}">${rl[c.role]}</span>
+        <span class="comment-time">${c.time}</span>
+      </div>
+      <div class="comment-text">${c.text}</div>
+    </div>`).join('');
+}
+
+function addComment(){
+  const txt=document.getElementById('c-input').value.trim();
+  if(!txt)return;
+  const role=document.getElementById('c-role').value;
+  const names={admin:team.find(m=>m.role==='admin')?.name||'Admin',team:team.find(m=>m.role==='team')?.name||'Equipo',user:currentTicket.requester};
+  currentTicket.comments.push({role,author:names[role],time:'Ahora',text:txt});
+  document.getElementById('c-input').value='';
+  renderPanelComments();
+}
+
+function closePanel(){document.getElementById('ticket-panel').classList.remove('open');currentTicket=null;}
+
+// ── NEW TICKET FORM ───────────────────────────────────
+function renderNewForm(){
+  populateAssignees();
+  document.getElementById('n-checklist').innerHTML=docs.map((d,i)=>`
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 0">
+      <input type="checkbox" id="ndoc-${d.id}" ${d.required?'checked disabled':''}>
+      ${d.name}${d.required?' <span style="font-size:10px;color:var(--danger);font-family:var(--mono);margin-left:4px">requerido</span>':''}
+    </label>`).join('');
+}
+
+function createTicket(){
+  const title=document.getElementById('n-title').value.trim();
+  const req=document.getElementById('n-req').value.trim();
+  if(!title||!req){showToast('Completa título y solicitante.');return;}
+  const ticketDocs=docs.map(d=>({id:d.id,done:false,link:''}));
+  const id='TKT-'+(String(tickets.length+1).padStart(3,'0'));
+  tickets.unshift({
+    id,title,desc:document.getElementById('n-desc').value||'Sin descripción.',
+    requester:req,assignee:document.getElementById('n-assign').value,
+    priority:document.getElementById('n-prio').value,
+    stageId:stages[0].id,
+    created:new Date().toISOString().slice(0,10),
+    docs:ticketDocs,comments:[]
+  });
+  document.getElementById('n-title').value='';
+  document.getElementById('n-desc').value='';
+  document.getElementById('n-req').value='';
+  document.getElementById('success-modal').classList.add('open');
+  renderTickets();
+}
+
+// ── CONFIG ────────────────────────────────────────────
+function showCTab(t){
+  ['stages','docs','team','integration'].forEach(x=>{
+    document.getElementById('cv-'+x).style.display=x===t?'':'none';
+    document.getElementById('ctab-'+x).classList.toggle('active',x===t);
+  });
+  document.getElementById('cfg-save-btn').style.display=t==='integration'?'none':'';
+  if(t==='stages')renderCfgStages();
+  if(t==='docs')renderCfgDocs();
+  if(t==='team')renderCfgTeam();
+}
+
+// Config — Stages
+function renderCfgStages(){
+  document.getElementById('cfg-stages-list').innerHTML=stages.map(s=>`
+    <div class="stage-item">
+      <div class="drag-handle">⠿</div>
+      <div class="stage-color-dot" style="background:${s.color}" onclick="togCP(${s.id})" title="Cambiar color"></div>
+      <input class="stage-name-input" value="${s.name}" onchange="updStage(${s.id},'name',this.value)">
+      <input class="stage-desc-input" value="${s.desc}" onchange="updStage(${s.id},'desc',this.value)">
+      <span class="stage-badge" style="background:${COLOR_BG[s.color]||'#1a2340'};color:${s.color}">${s.name.toUpperCase()}</span>
+      ${stages.length>2?`<button class="btn btn-danger btn-xs" onclick="rmStage(${s.id})">✕</button>`:''}
+    </div>
+    <div id="cp-${s.id}" style="display:none;padding:4px 14px 8px 44px">
+      <div class="color-picker-row">${COLORS.map(c=>`<div class="color-swatch${c===s.color?' sel':''}" style="background:${c}" onclick="setStageColor(${s.id},'${c}')"></div>`).join('')}</div>
+    </div>`).join('');
+  renderPipelinePreview();
+}
+function togCP(id){
+  const el=document.getElementById('cp-'+id);
+  const open=el.style.display!=='none';
+  stages.forEach(s=>{const e=document.getElementById('cp-'+s.id);if(e)e.style.display='none';});
+  if(!open)el.style.display='';
+}
+function setStageColor(id,c){updStage(id,'color',c);document.getElementById('cp-'+id).style.display='none';}
+function updStage(id,k,v){const s=stages.find(x=>x.id===id);if(s){s[k]=v;}renderCfgStages();renderSidebar();}
+function rmStage(id){stages=stages.filter(x=>x.id!==id);renderCfgStages();renderSidebar();}
+function addStage(){stages.push({id:Date.now(),name:'Nueva etapa',desc:'Descripción',color:COLORS[stages.length%COLORS.length]});renderCfgStages();renderSidebar();}
+function renderPipelinePreview(){
+  document.getElementById('pipeline-preview').innerHTML=stages.map(s=>`<div class="pipe-step" style="background:${s.color}">${s.name.substring(0,8).toUpperCase()}</div>`).join('');
+}
+
+// Config — Docs
+function renderCfgDocs(){
+  document.getElementById('cfg-docs-list').innerHTML=docs.map((d,i)=>`
+    <div class="doc-item">
+      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);width:22px">${String(i+1).padStart(2,'0')}</span>
+      <input class="doc-name-input" value="${d.name}" onchange="updDoc(${d.id},'name',this.value)">
+      <span class="toggle-label">${d.required?'Obligatorio':'Opcional'}</span>
+      <button class="toggle ${d.required?'on':'off'}" onclick="togDoc(${d.id})"></button>
+      <button class="btn btn-danger btn-xs" onclick="rmDoc(${d.id})">✕</button>
+    </div>`).join('');
+}
+function updDoc(id,k,v){const d=docs.find(x=>x.id===id);if(d)d[k]=v;renderCfgDocs();}
+function togDoc(id){const d=docs.find(x=>x.id===id);if(d)d.required=!d.required;renderCfgDocs();}
+function rmDoc(id){docs=docs.filter(x=>x.id!==id);renderCfgDocs();}
+function togAddDoc(){document.getElementById('add-doc-form').classList.toggle('open');}
+function addDoc(){
+  const name=document.getElementById('new-doc-name').value.trim();
+  if(!name)return;
+  docs.push({id:Date.now(),name,required:document.getElementById('new-doc-req').checked});
+  document.getElementById('new-doc-name').value='';
+  document.getElementById('add-doc-form').classList.remove('open');
+  renderCfgDocs();
+}
+
+// Config — Team
+function renderCfgTeam(){
+  document.getElementById('cfg-team-list').innerHTML=team.map(m=>`
+    <div class="member-item">
+      <div class="avatar" style="background:${m.color};color:${m.textColor}">${m.initials}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${m.name}</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${m.email}</div></div>
+      <select class="role-select-cfg" onchange="updMemberRole(${m.id},this.value)">
+        <option value="admin"${m.role==='admin'?' selected':''}>Administrador</option>
+        <option value="team"${m.role==='team'?' selected':''}>Equipo</option>
+        <option value="viewer"${m.role==='viewer'?' selected':''}>Solo lectura</option>
+      </select>
+      <span style="font-size:10px;font-family:var(--mono);padding:3px 9px;border-radius:5px;background:${ROLE_META[m.role].bg};color:${ROLE_META[m.role].text}">${ROLE_META[m.role].label}</span>
+      ${team.length>1?`<button class="btn btn-danger btn-xs" onclick="rmMember(${m.id})">✕</button>`:''}
+    </div>`).join('');
+}
+function updMemberRole(id,role){const m=team.find(x=>x.id===id);if(m){m.role=role;}renderCfgTeam();}
+function rmMember(id){team=team.filter(x=>x.id!==id);renderCfgTeam();}
+function togAddMember(){document.getElementById('add-member-form').classList.toggle('open');}
+function addMember(){
+  const name=document.getElementById('nm-name').value.trim();
+  const email=document.getElementById('nm-email').value.trim();
+  const role=document.getElementById('nm-role').value;
+  if(!name||!email)return;
+  const initials=name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  const rc=ROLE_META[role];
+  team.push({id:Date.now(),name,email,role,initials,color:rc.bg,textColor:rc.text});
+  document.getElementById('nm-name').value='';
+  document.getElementById('nm-email').value='';
+  document.getElementById('add-member-form').classList.remove('open');
+  renderCfgTeam();
+  renderSidebar();
+}
+
+function saveConfig(){
+  renderSidebar();
+  renderTickets();
+  showToast('✓ Configuración guardada');
+}
+
+// ── UTILS ─────────────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ── INIT ──────────────────────────────────────────────
+renderSidebar();
+renderTickets();
+</script>
+</body>
+</html>
